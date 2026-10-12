@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: walletlens
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: MONAD_RPC_URL
+        value: https://rpc1.monad.xyz
+      - key: EXPLORER_TX_BASE
+        value: https://monadvision.com/tx/
+      - key: LOG_CHUNK_BLOCKS
+        value: "100"
+      - key: LOG_MAX_CHUNKS
+        value: "20"
+      - key: RATE_LIMIT_PER_MIN
+        value: "30"
+      - key: HS_MAX_PAGES
+        value: "6"
+      - key: ENVIO_API_TOKEN
+        sync: false
+      - key: KIMI_API_KEY
+        sync: false
+      - key: KIMI_MODEL
+        value: kimi-k2-turbo-preview
