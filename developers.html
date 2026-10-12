@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WalletLens API: approval risk checks for Monad</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/docs.css">
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+  <aside class="side">
+    <div class="brand"><span class="mark"></span>WalletLens</div>
+    <nav>
+      <a href="/">Scanner</a>
+      <a href="/developers" class="on">Developers</a>
+    </nav>
+    <p class="note">Public, read-only API. No keys, no signatures, no stored data.</p>
+  </aside>
+
+  <div class="main">
+    <section class="card c12 doc">
+      <h1>WalletLens API</h1>
+      <p class="muted">Let your wallet, dApp or bot warn users about risky token approvals on Monad. Two read-only endpoints, JSON in and out.</p>
+    </section>
+
+    <section class="card c12 doc">
+      <h2>1. Check a spender before the user signs</h2>
+      <p><code>GET /api/v1/check?spender=0x...&amp;unlimited=true</code></p>
+      <pre>curl "https://YOUR-URL/api/v1/check?spender=0x1111111111111111111111111111111111111111&amp;unlimited=true"</pre>
+      <pre>{
+  "version": "1",
+  "spender": "0x1111...1111",
+  "verdict": "review",
+  "reason": "A contract is asking for an unlimited allowance. ...",
+  "checked": ["whether the spender address has contract code"],
+  "limitations": "Heuristic. Covers ERC-20 approvals only. ..."
+}</pre>
+      <p class="muted"><code>verdict</code> is one of <code>warn</code> (plain wallet), <code>review</code> (contract, unlimited), <code>no_flag</code>, <code>unclassified</code>. There is deliberately no "safe" verdict.</p>
+      <pre>const r = await fetch("https://YOUR-URL/api/v1/check?spender=" + spender + "&amp;unlimited=true");
+const v = await r.json();
+if (v.verdict === "warn") {
+  showWarning(v.reason); // ask the user to confirm before signing
+}</pre>
+    </section>
+
+    <section class="card c12 doc">
+      <h2>2. Scan a wallet's active approvals</h2>
+      <p><code>GET /api/v1/scan/{address}</code></p>
+      <pre>{
+  "version": "1",
+  "chain": "monad-mainnet",
+  "address": "0x...",
+  "risk_level": "medium",
+  "scanned_blocks": 112532831,
+  "findings": [{
+    "id": "wl-1",
+    "severity": "medium",
+    "title": "Unlimited approval to a contract",
+    "description": "The contract 0x0000...10e2 can spend any amount of 5 tokens. ...",
+    "evidence": { "tx_hash": "0x...", "explorer_url": "https://..." },
+    "source": "On-chain ERC-20 Approval event logs (Envio HyperSync, RPC fallback)",
+    "confidence": { "approval_exists": "high", "risk_judgement": "heuristic" },
+    "limitations": "Heuristic. Covers ERC-20 approvals only. ..."
+  }],
+  "summary": "...",
+  "summary_written_by": "rules"
+}</pre>
+      <p class="muted"><code>risk_level</code> is <code>high</code>, <code>medium</code> or <code>low</code>. High is reserved for an unlimited approval to a plain wallet. Every finding links to the transaction that created the approval.</p>
+    </section>
+
+    <section class="card c12 doc">
+      <h2>Limits and honesty</h2>
+      <p class="muted">Rate limited per IP. Results are cached for 5 minutes. Data comes from Envio HyperSync with an RPC fallback that only sees recent blocks, so a fallback scan covers far less history. WalletLens does not check token reputation, known-malicious address lists, NFT approvals or transaction history, and "low" never means "safe".</p>
+    </section>
+  </div>
+</body>
+</html>
