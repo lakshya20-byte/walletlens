@@ -21,7 +21,7 @@ $("form").addEventListener("submit", async (e) => {
     const res = await fetch("/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ address :walletAddress }),
+      body: JSON.stringify({ address :address }),
     });
     const data = await res.json();
     if (!res.ok) {
