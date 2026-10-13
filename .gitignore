@@ -1,5 +1,17 @@
+# secrets and local config: never commit
 .env
+.env.*
+!.env.example
+
+# Python
 .venv/
+venv/
 __pycache__/
-*.pyc.vscode/
+*.pyc
+.pytest_cache/
+
+# editors and OS
 .vscode/
+.idea/
+.DS_Store
+Thumbs.db
