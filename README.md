@@ -29,12 +29,30 @@ Every token approval is a permission that stays open until revoked. On Monad, wa
 
 Risk levels are categories, not scores. **High** means an unlimited approval to a plain wallet (an address with no contract code). Unlimited approval to a contract is "worth reviewing", because trading apps commonly request it.
 
+
 ## How it works
-1. Validate the address.
-2. Query Envio HyperSync for Approval events where the wallet is the owner.
-3. Keep the latest allowance per token and spender; drop revoked ones.
-4. Check spenders with `eth_getCode` on Monad RPC.
-5. Return findings. An explanation is written from the verified findings only (never from raw on-chain text, so token names cannot inject instructions).
+
+```mermaid
+flowchart TD
+    A["Wallet address"] --> B["Validate address"]
+    B --> C["Envio HyperSync<br/>Approval event history"]
+    C --> D["Reconstruct active ERC-20 approvals"]
+    D --> E["Monad RPC<br/>Check spender contract code"]
+    E --> F["WalletLens risk rules"]
+    F --> G["Structured security findings"]
+    G --> H["Dashboard / Read-only API"]
+
+    classDef input fill:#211633,stroke:#a855f7,color:#ffffff
+    classDef process fill:#151a2b,stroke:#7c3aed,color:#ffffff
+    classDef output fill:#301624,stroke:#fb7185,color:#ffffff
+
+    class A input
+    class B,C,D,E,F process
+    class G,H output
+```
+
+WalletLens is read-only: it analyzes approvals and reports findings. It does not request a seed phrase, private key, or transaction signature.
+
 
 ## Run locally
 ```
