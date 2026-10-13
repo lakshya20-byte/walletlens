@@ -1,14 +1,16 @@
-`<div align="center">`
+<div align="center">
+  <img src="assets/walletlens-animated-hero.gif" alt="WalletLens — Monad token approval security" width="100%">
 
-`<img src="assets/walletlens-animated-hero.gif" alt="WalletLens — Monad token approval security" width="100%">`
+  <p><strong>See what your wallet has approved.</strong></p>
+  <p>Read-only ERC-20 approval risk scanner for Monad.</p>
 
-`<br>`
+  <p>
+    <a href="#what-it-does">Features</a> ·
+    <a href="#how-it-works">How it works</a> ·
+    <a href="#run-locally">Run locally</a>
+  </p>
+</div>
 
-`**See what your wallet has approved.**`
-
-`[Features](#what-it-does) · [How it works](#how-it-works) · [Run locally](#run-locally)`
-
-`</div>`
 
 
 # WalletLens
