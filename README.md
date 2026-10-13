@@ -17,7 +17,8 @@
 
 Read-only token approval scanner and pre-sign check API for Monad.
 
-**Live:** https://YOUR-URL  |  **API docs:** https://YOUR-URL/developers
+**Live:** https://walletlens-9zpb.onrender.com  
+  **API docs:** https://walletlens-9zpb.onrender.com/developers
 
 ## The problem
 Every token approval is a permission that stays open until revoked. On Monad, wallets and dApps have no simple way to ask "who can spend this user's tokens, and should this new approval worry us?" WalletLens answers both, with a link to the on-chain transaction behind every finding.
