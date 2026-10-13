@@ -298,29 +298,66 @@ async def analyze(body: Body, request: Request):
     if hit and now - hit[0] < CACHE_SECONDS:
         return hit[1]
 
+  
     try:
-        if hs_enabled():
-            blocks, active = await fetch_approvals_hs(address)
-        else:
-            async with httpx.AsyncClient(timeout=10) as client:
-                _, blocks, active = await fetch_approvals(client, address)
-    except (RpcError, HyperSyncError) as e:
-        return JSONResponse({"error": f"Could not read chain data: {e}"}, 502)
-    except Exception:
-        return JSONResponse({"error": "Something went wrong. Try again."}, 500)
+        print("DEBUG: Starting chain-history scan", flush=True)
 
+        if hs_enabled():
+            print("DEBUG: Using HyperSync", flush=True)
+            blocks, active = await asyncio.wait_for(
+                fetch_approvals_hs(address),
+                timeout=30,
+            )
+        else:
+            print("DEBUG: Using Monad RPC", flush=True)
+            async with httpx.AsyncClient(timeout=10) as client:
+                _, blocks, active = await asyncio.wait_for(
+                    fetch_approvals(client, address),
+                    timeout=30,
+                )
+
+        print(
+            f"DEBUG: Scan finished; blocks={blocks}, approvals={len(active)}",
+            flush=True,
+        )
+
+    except asyncio.TimeoutError:
+        print("DEBUG: Chain-history scan timed out", flush=True)
+        return JSONResponse(
+            {"error": "Chain scan timed out. Please try again shortly."},
+            status_code=504,
+        )
+    except (RpcError, HyperSyncError) as e:
+        print(f"DEBUG: Chain data error: {e}", flush=True)
+        return JSONResponse(
+            {"error": f"Could not read chain data: {e}"},
+            status_code=502,
+        )
+    except Exception as e:
+        print(f"DEBUG: Unexpected scan error: {type(e).__name__}: {e}", flush=True)
+        return JSONResponse(
+            {"error": "Something went wrong while scanning chain history."},
+            status_code=500,
+        )
+   
     async with httpx.AsyncClient(timeout=10) as c:
         eoa = await find_eoa_spenders(c, active)
+
     level, findings = assess_wallet(active, eoa)
     ai_text = await explain(level, findings, blocks)
+
     result = {
-        "address": address, "level": level, "findings": findings,
+        "address": address,
+        "level": level,
+        "findings": findings,
         "summary": ai_text or fallback_summary(level, findings, blocks),
-        "ai": ai_text is not None, "scanned_blocks": blocks, "explorer_base": EXPLORER,
+        "ai": ai_text is not None,
+        "scanned_blocks": blocks,
+        "explorer_base": EXPLORER,
     }
+
     _cache[key] = (now, result)
-    return result
-    
+    return result 
 
 app.include_router(build_router(analyze, Body))
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"], allow_headers=[])
