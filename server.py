@@ -24,8 +24,8 @@ KIMI_KEY = os.environ.get("KIMI_API_KEY", "")
 KIMI_URL = os.environ.get("KIMI_BASE_URL", "https://api.moonshot.ai/v1")
 KIMI_MODEL = os.environ.get("KIMI_MODEL", "")
 EXPLORER = os.environ.get("EXPLORER_TX_BASE", "https://monadvision.com/tx/")
-CHUNK = int(os.environ.get("LOG_CHUNK_BLOCKS", "10000"))
-MAX_CHUNKS = int(os.environ.get("LOG_MAX_CHUNKS", "20"))
+CHUNK = int(os.environ.get("SCAN_CHUNK", "1000"))
+MAX_CHUNKS = int(os.environ.get("SCAN_MAX_CHUNKS", "3"))
 RATE_LIMIT = int(os.environ.get("RATE_LIMIT_PER_MIN", "10"))
 
 APPROVAL_TOPIC = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925"
