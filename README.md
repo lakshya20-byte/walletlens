@@ -1,3 +1,16 @@
+`<div align="center">`
+
+`<img src="assets/walletlens-animated-hero.gif" alt="WalletLens — Monad token approval security" width="100%">`
+
+`<br>`
+
+`**See what your wallet has approved.**`
+
+`[Features](#what-it-does) · [How it works](#how-it-works) · [Run locally](#run-locally)`
+
+`</div>`
+
+
 # WalletLens
 
 Read-only token approval scanner and pre-sign check API for Monad.
