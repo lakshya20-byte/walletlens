@@ -68,21 +68,35 @@ def short(a: str) -> str:
 async def rpc(client, method, params):
     for attempt in range(3):
         try:
-            r = await client.post(
-                RPC_URL, json={"jsonrpc": "2.0", "id": 1, "method": method, "params": params}
+            response = await client.post(
+                RPC_URL,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": method,
+                    "params": params,
+                },
             )
-            r.raise_for_status()
-            body = r.json()
-            if "error" in body:
-                raise RpcError(str(body["error"].get("message", "rpc error"))[:120])
-            return body["result"]
-        except RpcError:
-            raise
-        except (httpx.HTTPError, ValueError):
-                                   if attempt == 2:
-                                     raise RpcError("The data provider did not respond.")
-                                     await asyncio.sleep(1.5)
+            response.raise_for_status()
+            body = response.json()
 
+            if "error" in body:
+                error = body["error"]
+                message = error.get("message", "RPC error")
+                raise RpcError(str(message)[:200])
+
+            if "result" not in body:
+                raise RpcError("The data provider returned an invalid response.")
+
+            return body["result"]
+
+        except RpcError:
+            # Preserve provider errors so range splitting can recognize them.
+            raise
+        except (httpx.HTTPError, ValueError) as exc:
+            if attempt == 2:
+                raise RpcError("The data provider did not respond.") from exc
+            await asyncio.sleep(1.5)
 
 async def fetch_approvals(client, owner):
     latest = int(await rpc(client, "eth_blockNumber", []), 16)
