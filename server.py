@@ -285,6 +285,7 @@ async def analyze(body: Body, request: Request):
     if len(q) >= RATE_LIMIT:
         return JSONResponse({"error": "Too many requests. Wait a minute and try again."}, 429)
     q.append(now)
+    print("DEBUG: /api/analyze received request", flush=True)
 
     address = body.address.strip()
     if not ADDR_RE.match(address):
