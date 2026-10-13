@@ -83,38 +83,86 @@ async def rpc(client, method, params):
                                      raise RpcError("The data provider did not respond.")
                                      await asyncio.sleep(1.5)
 
+
 async def fetch_approvals(client, owner):
     latest = int(await rpc(client, "eth_blockNumber", []), 16)
     owner_topic = "0x" + "0" * 24 + owner[2:].lower()
     sem = asyncio.Semaphore(2)
-    n = min(MAX_CHUNKS, latest // CHUNK + 1)
+
+    # Scan the most recent blocks, using the configured chunk size.
+    chunk_size = max(1, CHUNK)
+    max_chunks = max(1, MAX_CHUNKS)
+    n = min(max_chunks, latest // chunk_size + 1)
+
+    async def get_logs(from_block, to_block):
+        """Retry rejected block ranges by splitting them in half."""
+        async with sem:
+            try:
+                return await rpc(
+                    client,
+                    "eth_getLogs",
+                    [{
+                        "fromBlock": hex(from_block),
+                        "toBlock": hex(to_block),
+                        "topics": [APPROVAL_TOPIC, owner_topic],
+                    }],
+                )
+            except RpcError as exc:
+                message = str(exc).lower()
+                range_too_large = (
+                    "block range too large" in message
+                    or "range is too large" in message
+                    or "query returned more than" in message
+                    or "too many results" in message
+                )
+
+                if not range_too_large or from_block >= to_block:
+                    raise
+
+        # Do not hold the semaphore while recursively requesting subranges.
+        midpoint = (from_block + to_block) // 2
+        left, right = await asyncio.gather(
+            get_logs(from_block, midpoint),
+            get_logs(midpoint + 1, to_block),
+        )
+        return left + right
 
     async def one(i):
-        to_b = latest - i * CHUNK
-        from_b = max(0, to_b - CHUNK + 1)
-        async with sem:
-            return await rpc(
-                client,
-                "eth_getLogs",
-                [{"fromBlock": hex(from_b), "toBlock": hex(to_b),
-                  "topics": [APPROVAL_TOPIC, owner_topic]}],
-            )
+        to_block = latest - i * chunk_size
+        from_block = max(0, to_block - chunk_size + 1)
+        return await get_logs(from_block, to_block)
 
     parts = await asyncio.gather(*(one(i) for i in range(n)))
     logs = [log for part in parts for log in part]
-    logs.sort(key=lambda l: (int(l["blockNumber"], 16), int(l["logIndex"], 16)))
+    logs.sort(
+        key=lambda log: (
+            int(log["blockNumber"], 16),
+            int(log["logIndex"], 16),
+        )
+    )
 
     latest_by_pair = {}
-    for l in logs:
-        if len(l.get("topics", [])) != 3 or len(l.get("data", "")) != 66:
-            continue  # ERC-20 Approval only (skips NFT approvals)
-        spender = "0x" + l["topics"][2][-40:]
-        latest_by_pair[(l["address"].lower(), spender.lower())] = {
-            "token": l["address"], "spender": spender,
-            "value": int(l["data"], 16), "tx_hash": l["transactionHash"],
+    for log in logs:
+        if len(log.get("topics", [])) != 3 or len(log.get("data", "")) != 66:
+            continue
+
+        spender = "0x" + log["topics"][2][-40:]
+        latest_by_pair[
+            (log["address"].lower(), spender.lower())
+        ] = {
+            "token": log["address"],
+            "spender": spender,
+            "value": int(log["data"], 16),
+            "tx_hash": log["transactionHash"],
         }
-    active = [a for a in latest_by_pair.values() if a["value"] > 0]
-    return latest, n * CHUNK, active
+
+    active = [
+        approval
+        for approval in latest_by_pair.values()
+        if approval["value"] > 0
+    ]
+    blocks_scanned = min(latest + 1, n * chunk_size)
+    return latest, blocks_scanned, active
 
 
 def run_rules(active):
